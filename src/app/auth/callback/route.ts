@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { getSiteUrl } from "@/lib/utils/site-url";
 import {
   ROLE_DEFAULT_PERMISSIONS,
@@ -21,26 +21,37 @@ import type { UserRole, PermissionKey } from "@/lib/supabase/database.types";
  *    - Staff / Admin (superadmin, admin, bendahara, staff) → /admin
  *    - Pelanggan biasa → / (atau parameter `next`)
  */
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const origin = getSiteUrl(request);
-  const code = searchParams.get("code");
-  const errorParam = searchParams.get("error");
+export async function GET(request: NextRequest) {
+  const siteUrl = getSiteUrl(request);
+  const baseOrigin =
+    process.env.NODE_ENV === "production" &&
+    request.nextUrl.origin.includes("localhost") &&
+    siteUrl &&
+    !siteUrl.includes("localhost")
+      ? siteUrl
+      : request.nextUrl.origin;
+
+  const createRedirect = (pathWithSearch: string) => {
+    return NextResponse.redirect(new URL(pathWithSearch, baseOrigin));
+  };
+
+  const code = request.nextUrl.searchParams.get("code");
+  const errorParam = request.nextUrl.searchParams.get("error");
 
   // Handle OAuth errors from Google
   if (errorParam) {
-    return NextResponse.redirect(`${origin}/login?error=oauth_denied`);
+    return createRedirect("/login?error=oauth_denied");
   }
 
   if (!code) {
-    return NextResponse.redirect(`${origin}/login?error=no_code`);
+    return createRedirect("/login?error=no_code");
   }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error || !data.session) {
-    return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+    return createRedirect("/login?error=auth_callback_failed");
   }
 
   // ── Sync user profile & permissions on login ───────────────────
@@ -111,27 +122,27 @@ export async function GET(request: Request) {
   }
 
   // ── Role & Permission-based redirect ──────────────────────────
-  const nextParam = searchParams.get("next");
+  const nextParam = request.nextUrl.searchParams.get("next");
 
   // If user came from a specific page or action (e.g. /?openCart=1, /#menu, /pesanan)
   if (nextParam && nextParam !== "/login") {
     // If attempting to go to admin panel, verify staff/admin role
     if (nextParam.startsWith("/admin")) {
       if (isStaffOrAdmin(role)) {
-        return NextResponse.redirect(`${origin}${nextParam}`);
+        return createRedirect(nextParam);
       }
-      return NextResponse.redirect(`${origin}/?unauthorized=admin`);
+      return createRedirect("/?unauthorized=admin");
     }
 
     // Return to the page they were previously browsing (e.g. cart checkout, menu, orders)
-    return NextResponse.redirect(`${origin}${nextParam}`);
+    return createRedirect(nextParam);
   }
 
   // Default redirect when no specific destination is requested:
   // Staff/Admin goes to /admin, customers go to storefront /
   if (isStaffOrAdmin(role)) {
-    return NextResponse.redirect(`${origin}/admin`);
+    return createRedirect("/admin");
   }
 
-  return NextResponse.redirect(`${origin}/`);
+  return createRedirect("/");
 }
