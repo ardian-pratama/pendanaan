@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { getSiteUrl } from "@/lib/utils/site-url";
 import {
   ROLE_DEFAULT_PERMISSIONS,
   isStaffOrAdmin,
@@ -21,7 +22,8 @@ import type { UserRole, PermissionKey } from "@/lib/supabase/database.types";
  *    - Pelanggan biasa → / (atau parameter `next`)
  */
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = getSiteUrl(request);
   const code = searchParams.get("code");
   const errorParam = searchParams.get("error");
 

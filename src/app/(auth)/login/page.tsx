@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
+import { getSiteUrl } from "@/lib/utils/site-url";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -39,12 +40,15 @@ export default function LoginPage() {
       const nextParam = searchParams?.get("next") || "/";
 
       const supabase = createClient();
+      const siteUrl = getSiteUrl();
+      const callbackRedirect = `${siteUrl}/auth/callback?next=${encodeURIComponent(
+        nextParam
+      )}`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-            nextParam
-          )}`,
+          redirectTo: callbackRedirect,
           queryParams: {
             access_type: "offline",
             prompt: "consent",

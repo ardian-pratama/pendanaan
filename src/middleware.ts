@@ -94,9 +94,13 @@ export async function middleware(request: NextRequest) {
     // Prioritize returning to original location if specified (e.g. /?openCart=1, /pesanan, /#menu)
     if (next && next !== "/login") {
       if (next.startsWith("/admin") && !hasAdminAccess) {
-        return NextResponse.redirect(new URL("/?unauthorized=admin", request.url));
+        const url = request.nextUrl.clone();
+        url.pathname = "/";
+        url.search = "unauthorized=admin";
+        return NextResponse.redirect(url);
       }
-      return NextResponse.redirect(new URL(next, request.url));
+      const targetUrl = new URL(next, request.nextUrl.origin);
+      return NextResponse.redirect(targetUrl);
     }
 
     // Default redirect when no explicit next is specified:
@@ -107,7 +111,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    return NextResponse.redirect(new URL("/", request.url));
+    const homeUrl = request.nextUrl.clone();
+    homeUrl.pathname = "/";
+    homeUrl.search = "";
+    return NextResponse.redirect(homeUrl);
   }
 
   return supabaseResponse;
