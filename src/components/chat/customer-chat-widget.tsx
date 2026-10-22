@@ -209,7 +209,7 @@ export function CustomerChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 25, scale: 0.92 }}
             transition={{ type: "spring", stiffness: 350, damping: 28 }}
-            className="fixed inset-x-3 bottom-4 sm:inset-x-auto sm:right-6 sm:bottom-6 sm:w-96 h-[520px] max-h-[85vh] rounded-3xl border border-border shadow-2xl bg-card overflow-hidden flex flex-col p-0 z-50"
+            className="fixed inset-x-3 bottom-3 top-20 sm:inset-x-auto sm:top-auto sm:right-6 sm:bottom-6 sm:w-96 sm:h-[520px] sm:max-h-[85vh] rounded-3xl border border-border shadow-2xl bg-card overflow-hidden flex flex-col p-0 z-50"
           >
             {/* Header: Sisi Penerima / Panitia MathBites */}
             <div className="p-4 bg-primary text-primary-foreground flex items-center justify-between shadow-xs shrink-0">

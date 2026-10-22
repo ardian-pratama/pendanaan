@@ -8,13 +8,7 @@ export async function POST(request: NextRequest) {
   
   const next = request.nextUrl.searchParams.get("next") || "/login";
   const siteUrl = getSiteUrl(request);
-  const baseOrigin =
-    process.env.NODE_ENV === "production" &&
-    request.nextUrl.origin.includes("localhost") &&
-    siteUrl &&
-    !siteUrl.includes("localhost")
-      ? siteUrl
-      : request.nextUrl.origin;
+  const baseOrigin = siteUrl || request.nextUrl.origin;
   
   return NextResponse.redirect(new URL(next, baseOrigin), { status: 302 });
 }
@@ -25,13 +19,7 @@ export async function GET(request: NextRequest) {
   
   const next = request.nextUrl.searchParams.get("next") || "/login";
   const siteUrl = getSiteUrl(request);
-  const baseOrigin =
-    process.env.NODE_ENV === "production" &&
-    request.nextUrl.origin.includes("localhost") &&
-    siteUrl &&
-    !siteUrl.includes("localhost")
-      ? siteUrl
-      : request.nextUrl.origin;
+  const baseOrigin = siteUrl || request.nextUrl.origin;
   
   return NextResponse.redirect(new URL(next, baseOrigin), { status: 302 });
 }

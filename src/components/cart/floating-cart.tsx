@@ -8,11 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "motion/react";
 
 export function FloatingCart() {
-  const { totalItems, totalPrice, openCart } = useCart();
+  const { totalItems, totalPrice, openCart, isCartOpen } = useCart();
 
   return (
     <AnimatePresence>
-      {totalItems > 0 && (
+      {totalItems > 0 && !isCartOpen && (
         <motion.div
           key="floating-cart"
           initial={{ opacity: 0, y: 25, scale: 0.95 }}
@@ -21,7 +21,7 @@ export function FloatingCart() {
           transition={{ type: "spring", stiffness: 400, damping: 30 }}
           role="complementary"
           aria-label="Keranjang belanja aktif"
-          className="fixed bottom-5 sm:bottom-6 left-4 sm:left-1/2 sm:-translate-x-1/2 z-40 max-w-[calc(100%-6.5rem)] sm:max-w-md w-auto"
+          className="fixed bottom-20 sm:bottom-6 left-4 sm:left-1/2 sm:-translate-x-1/2 z-40 max-w-[calc(100%-2rem)] sm:max-w-md w-auto"
         >
           <Button
             type="button"

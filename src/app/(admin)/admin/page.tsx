@@ -158,7 +158,7 @@ function StatCard({
   };
 
   return (
-    <Card className="rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-xs hover:-translate-y-0.5 transition-transform bg-card border-border">
+    <Card className="rounded-2xl p-4 sm:p-5 flex flex-col justify-between h-full gap-3 shadow-xs hover:-translate-y-0.5 transition-transform bg-card border-border">
       <div className="flex items-start justify-between">
         <div
           className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${color}`}
@@ -174,11 +174,11 @@ function StatCard({
           </span>
         )}
       </div>
-      <div>
+      <div className="flex-1 flex flex-col justify-center my-1">
         <p className="text-xs text-muted-foreground font-medium">{label}</p>
         <p className="text-lg sm:text-xl font-bold text-foreground mt-0.5 tracking-tight truncate">{value}</p>
       </div>
-      <p className="text-xs text-muted-foreground">{sub}</p>
+      <p className="text-[11px] text-muted-foreground">{sub}</p>
     </Card>
   );
 }
@@ -1012,22 +1012,22 @@ export default function AdminDashboard() {
               <Table className="w-full text-sm min-w-[780px]">
                 <TableHeader>
                   <TableRow className="text-xs bg-muted/40">
-                    <TableHead className="px-5 py-3.5 font-semibold w-[20%] min-w-[140px]">
+                    <TableHead className="px-5 py-3.5 font-semibold w-[18%] min-w-[130px]">
                       ID & Tanggal
                     </TableHead>
-                    <TableHead className="px-4 py-3.5 font-semibold w-[24%] min-w-[160px]">
+                    <TableHead className="px-4 py-3.5 font-semibold w-[22%] min-w-[150px]">
                       Pelanggan
                     </TableHead>
-                    <TableHead className="px-4 py-3.5 font-semibold hidden sm:table-cell w-[24%] min-w-[180px]">
+                    <TableHead className="px-4 py-3.5 font-semibold hidden sm:table-cell w-[25%] min-w-[180px]">
                       Item
                     </TableHead>
-                    <TableHead className="text-right px-4 py-3.5 font-semibold w-[14%] min-w-[120px]">
+                    <TableHead className="text-right px-4 py-3.5 font-semibold w-[13%] min-w-[110px]">
                       Total
                     </TableHead>
-                    <TableHead className="text-center px-4 py-3.5 font-semibold w-[14%] min-w-[110px]">
+                    <TableHead className="text-center px-4 py-3.5 font-semibold w-[11%] min-w-[100px]">
                       Status
                     </TableHead>
-                    <TableHead className="px-5 py-3.5 text-right font-semibold w-[14%] min-w-[130px]">
+                    <TableHead className="px-5 py-3.5 text-right font-semibold w-[11%] min-w-[110px]">
                       Aksi
                     </TableHead>
                   </TableRow>

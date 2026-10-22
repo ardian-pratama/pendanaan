@@ -728,17 +728,17 @@ export default function AdminOrdersPage() {
                   </div>
 
                   {/* Total & Action Bar */}
-                  <div className="flex items-center justify-between pt-2 border-t border-border">
-                    <div>
-                      <span className="text-xs text-muted-foreground font-medium">
-                        Total Bayar ({order.payment_method || "Tunai"})
+                  <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-border">
+                    <div className="min-w-0">
+                      <span className="text-[11px] text-muted-foreground font-medium block truncate">
+                        Total ({order.payment_method || "Tunai"})
                       </span>
                       <p className="font-bold text-sm text-foreground">
                         {formatRupiah(order.total_amount)}
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
@@ -746,10 +746,10 @@ export default function AdminOrdersPage() {
                           setSelectedOrder(order);
                           setDetailOpen(true);
                         }}
-                        className="h-8 gap-1.5 text-xs font-semibold cursor-pointer"
+                        className="h-8 px-3 gap-1.5 text-xs font-semibold cursor-pointer rounded-xl shadow-2xs hover:border-primary/50"
                       >
                         <SlidersHorizontal className="w-3.5 h-3.5 text-primary" />
-                        <span>Kelola Pesanan</span>
+                        <span>Kelola</span>
                       </Button>
                     </div>
                   </div>

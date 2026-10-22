@@ -458,65 +458,75 @@ export default function AdminProductsPage() {
         </div>
 
         {/* Summary Analytics KPI Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-          <Card className="border-border bg-card shadow-2xs">
-            <CardContent className="p-4 flex flex-col gap-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+          <Card className="border-border bg-card shadow-2xs h-full">
+            <CardContent className="p-4 flex flex-col justify-between h-full gap-2">
               <span className="text-xs text-muted-foreground font-medium flex items-center justify-between">
                 Total Menu
                 <Package className="w-3.5 h-3.5 text-primary" />
               </span>
-              <span className="text-2xl font-bold text-foreground">{stats.total}</span>
-              <span className="text-[11px] text-muted-foreground">Item dalam katalog</span>
+              <div>
+                <span className="text-2xl font-bold text-foreground block">{stats.total}</span>
+                <span className="text-[11px] text-muted-foreground">Item dalam katalog</span>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card shadow-2xs">
-            <CardContent className="p-4 flex flex-col gap-1">
+          <Card className="border-border bg-card shadow-2xs h-full">
+            <CardContent className="p-4 flex flex-col justify-between h-full gap-2">
               <span className="text-xs text-muted-foreground font-medium flex items-center justify-between">
                 Menu Tersedia
                 <Eye className="w-3.5 h-3.5 text-emerald-500" />
               </span>
-              <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                {stats.available}
-              </span>
-              <span className="text-[11px] text-muted-foreground">Siap dipesan</span>
+              <div>
+                <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 block">
+                  {stats.available}
+                </span>
+                <span className="text-[11px] text-muted-foreground">Siap dipesan</span>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card shadow-2xs">
-            <CardContent className="p-4 flex flex-col gap-1">
+          <Card className="border-border bg-card shadow-2xs h-full">
+            <CardContent className="p-4 flex flex-col justify-between h-full gap-2">
               <span className="text-xs text-muted-foreground font-medium flex items-center justify-between">
                 Menu Habis
                 <EyeOff className="w-3.5 h-3.5 text-rose-500" />
               </span>
-              <span className="text-2xl font-bold text-rose-600 dark:text-rose-400">
-                {stats.outOfStock}
-              </span>
-              <span className="text-[11px] text-muted-foreground">Stok kosong</span>
+              <div>
+                <span className="text-2xl font-bold text-rose-600 dark:text-rose-400 block">
+                  {stats.outOfStock}
+                </span>
+                <span className="text-[11px] text-muted-foreground">Stok kosong</span>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card shadow-2xs">
-            <CardContent className="p-4 flex flex-col gap-1">
+          <Card className="border-border bg-card shadow-2xs h-full">
+            <CardContent className="p-4 flex flex-col justify-between h-full gap-2">
               <span className="text-xs text-muted-foreground font-medium flex items-center justify-between">
                 Menu Unggulan
                 <Star className="w-3.5 h-3.5 text-amber-500" />
               </span>
-              <span className="text-2xl font-bold text-amber-600 dark:text-amber-400">
-                {stats.featured}
-              </span>
-              <span className="text-[11px] text-muted-foreground">Sorotan hero</span>
+              <div>
+                <span className="text-2xl font-bold text-amber-600 dark:text-amber-400 block">
+                  {stats.featured}
+                </span>
+                <span className="text-[11px] text-muted-foreground">Sorotan hero</span>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="border-border bg-card shadow-2xs col-span-2 lg:col-span-1">
-            <CardContent className="p-4 flex flex-col gap-1">
+          <Card className="border-border bg-card shadow-2xs col-span-2 sm:col-span-1 h-full">
+            <CardContent className="p-4 flex flex-col justify-between h-full gap-2">
               <span className="text-xs text-muted-foreground font-medium flex items-center justify-between">
                 Total Terjual
                 <TrendingUp className="w-3.5 h-3.5 text-primary" />
               </span>
-              <span className="text-2xl font-bold text-primary">{stats.totalSold}</span>
-              <span className="text-[11px] text-muted-foreground">Porsi makanan/minuman</span>
+              <div>
+                <span className="text-2xl font-bold text-primary block">{stats.totalSold}</span>
+                <span className="text-[11px] text-muted-foreground">Porsi makanan/minuman</span>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -694,70 +704,101 @@ export default function AdminProductsPage() {
           </Card>
         ) : viewMode === "grid" ? (
           /* ──────── GRID VIEW ──────── */
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
             {filteredAndSortedItems.map((item) => (
               <Card
                 key={item.id}
                 onClick={() => handleOpenEdit(item)}
-                className={`group border-border bg-card shadow-2xs hover:shadow-md transition-all overflow-hidden flex flex-col rounded-2xl cursor-pointer hover:border-primary/40 relative ${
-                  !item.is_available ? "opacity-85" : ""
+                className={`group border border-border/80 bg-card shadow-2xs hover:shadow-lg transition-all overflow-hidden flex flex-col justify-between rounded-2xl cursor-pointer hover:border-primary/50 relative h-full ${
+                  !item.is_available ? "opacity-90 bg-muted/20" : ""
                 }`}
               >
-                {/* Photo & Badges */}
-                <div className="relative aspect-video overflow-hidden bg-muted">
+                {/* 1. Photo & Badges Container */}
+                <div className="relative aspect-[16/10] overflow-hidden bg-muted/70 shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={item.image_url}
+                    src={item.image_url || "/images/placeholder-food.png"}
                     alt={item.name}
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     loading="lazy"
                   />
 
-                  {/* Top Left Badges */}
-                  <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 flex-wrap">
-                    {item.badge && (
-                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs ${item.badge_style || "bg-primary text-white"}`}>
-                        {item.badge}
-                      </span>
-                    )}
-                    <Badge variant="outline" className="bg-background/90 backdrop-blur-xs text-[10px] font-bold border-border/50 uppercase">
-                      {item.category}
-                    </Badge>
-                  </div>
+                  {/* Gradient shadow for text readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/40 pointer-events-none" />
 
-                  {/* Top Right Badges */}
-                  <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
-                    {item.is_featured && (
-                      <Badge className="bg-amber-500/90 hover:bg-amber-500 text-white text-[10px] px-1.5 py-0.5 font-bold gap-1 shadow-xs backdrop-blur-xs">
-                        <Star className="w-3 h-3 fill-current" />
-                        Unggulan
+                  {/* Non-overlapping Top Bar for Badges & Quick Action */}
+                  <div className="absolute top-2.5 inset-x-2.5 flex items-start justify-between gap-2 pointer-events-none">
+                    {/* Left Badges */}
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0 pointer-events-auto">
+                      <Badge
+                        variant="secondary"
+                        className="bg-background/95 backdrop-blur-md text-[10px] font-bold uppercase shadow-xs border-border/40 py-0.5 px-2 text-foreground"
+                      >
+                        {item.category}
                       </Badge>
-                    )}
-                    <Badge
-                      variant="outline"
-                      className={`text-[10px] px-2 py-0.5 font-bold shadow-xs backdrop-blur-xs ${
-                        item.is_available
-                          ? "bg-emerald-500/90 text-white border-transparent"
-                          : "bg-rose-500/90 text-white border-transparent"
-                      }`}
-                    >
-                      {item.is_available ? "Tersedia" : "Habis"}
-                    </Badge>
+                      {item.badge && (
+                        <span
+                          className={`px-2 py-0.5 rounded-md text-[10px] font-bold shadow-xs whitespace-nowrap ${
+                            item.badge_style || "bg-primary text-white"
+                          }`}
+                        >
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Right Quick Toggles */}
+                    <div className="flex items-center gap-1.5 shrink-0 pointer-events-auto">
+                      {/* Featured Star Toggle */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleFeatured(item);
+                        }}
+                        title={item.is_featured ? "Hapus dari Menu Unggulan" : "Jadikan Menu Unggulan"}
+                        className={`size-7 rounded-full flex items-center justify-center backdrop-blur-md transition-all cursor-pointer shadow-xs ${
+                          item.is_featured
+                            ? "bg-amber-500 text-white hover:bg-amber-600 ring-2 ring-white/50"
+                            : "bg-black/50 text-white/80 hover:bg-black/70 hover:text-amber-300"
+                        }`}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${item.is_featured ? "fill-current" : ""}`} />
+                      </button>
+
+                      {/* Availability Pill Toggle */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleAvailable(item);
+                        }}
+                        title={item.is_available ? "Klik untuk tandai Habis" : "Klik untuk tandai Tersedia"}
+                        className={`h-7 px-2.5 rounded-full text-[10px] font-bold tracking-tight shadow-xs backdrop-blur-md transition-all cursor-pointer flex items-center gap-1.5 ${
+                          item.is_available
+                            ? "bg-emerald-600/95 hover:bg-emerald-700 text-white"
+                            : "bg-rose-600/95 hover:bg-rose-700 text-white"
+                        }`}
+                      >
+                        <span className={`size-1.5 rounded-full ${item.is_available ? "bg-white animate-pulse" : "bg-white/70"}`} />
+                        <span>{item.is_available ? "Tersedia" : "Habis"}</span>
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Out of Stock Overlay */}
+                  {/* Out of Stock Center Banner */}
                   {!item.is_available && (
-                    <div className="absolute inset-0 bg-background/60 backdrop-blur-2xs flex items-center justify-center">
-                      <span className="px-3 py-1 rounded-full bg-destructive text-destructive-foreground text-xs font-bold shadow-sm">
+                    <div className="absolute inset-0 bg-background/50 backdrop-blur-2xs flex items-center justify-center pointer-events-none">
+                      <span className="px-3.5 py-1 rounded-full bg-destructive text-destructive-foreground text-xs font-bold shadow-md ring-2 ring-white/40">
                         Stok Habis
                       </span>
                     </div>
                   )}
                 </div>
 
-                {/* Content */}
+                {/* 2. Content Body & Fixed Text Area */}
                 <div className="p-4 flex-1 flex flex-col justify-between gap-3">
-                  <div>
+                  <div className="min-h-[58px]">
                     <h4 className="font-bold text-sm text-foreground leading-snug line-clamp-1 group-hover:text-primary transition-colors">
                       {item.name}
                     </h4>
@@ -766,28 +807,72 @@ export default function AdminProductsPage() {
                     </p>
                   </div>
 
-                  <div className="pt-2 border-t border-border flex items-center justify-between">
-                    <div>
-                      <span className="text-base font-extrabold text-primary block leading-none">
-                        {formatRupiah(item.price)}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground mt-0.5 block">
-                        {item.sold_count || 0} porsi terjual
+                  {/* Price & Sales Stat */}
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-base font-extrabold text-primary block leading-none tracking-tight">
+                      {formatRupiah(item.price)}
+                    </span>
+                    <span className="text-[11px] font-medium text-muted-foreground bg-muted/60 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <TrendingUp className="w-3 h-3 text-primary" />
+                      <span>{item.sold_count || 0} porsi</span>
+                    </span>
+                  </div>
+
+                  {/* 3. Action Buttons Bar */}
+                  <div className="pt-2.5 border-t border-border/80 flex items-center justify-between gap-2">
+                    {/* Switch Toggle */}
+                    <div
+                      className="flex items-center gap-2 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleToggleAvailable(item);
+                      }}
+                      title={item.is_available ? "Tandai Stok Habis" : "Tandai Stok Tersedia"}
+                    >
+                      <Switch
+                        checked={item.is_available}
+                        onCheckedChange={() => handleToggleAvailable(item)}
+                        disabled={!canUpdate}
+                        aria-label={`Status stok ${item.name}`}
+                      />
+                      <span className="text-[11px] font-semibold text-muted-foreground hidden sm:inline">
+                        {item.is_available ? "Tersedia" : "Habis"}
                       </span>
                     </div>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenEdit(item);
-                      }}
-                      className="rounded-xl text-xs font-bold gap-1.5 h-8 border-border group-hover:border-primary/40 group-hover:bg-primary/5 transition-all cursor-pointer"
-                    >
-                      <Edit2 className="w-3.5 h-3.5 text-primary" />
-                      <span>Kelola Menu</span>
-                    </Button>
+                    {/* Action Buttons: Edit & Delete */}
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenEdit(item);
+                        }}
+                        className="rounded-xl text-xs font-bold gap-1.5 h-8 px-2.5 border-border hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer shadow-2xs"
+                      >
+                        <Edit2 className="w-3.5 h-3.5 text-primary" />
+                        <span>Edit</span>
+                      </Button>
+
+                      {canDelete && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setItemToDelete(item);
+                          }}
+                          className="size-8 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                          title="Hapus Menu"
+                          aria-label={`Hapus ${item.name}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>
@@ -854,39 +939,82 @@ export default function AdminProductsPage() {
                       {item.sold_count || 0} porsi
                     </TableCell>
                     <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={`text-xs font-semibold ${
-                          item.is_available
-                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300"
-                            : "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-300"
-                        }`}
-                      >
-                        {item.is_available ? "Tersedia" : "Habis"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {item.is_featured ? (
-                        <Badge className="bg-amber-500 text-white text-[10px] gap-1">
-                          <Star className="w-3 h-3 fill-current" /> Unggulan
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
+                      <div
+                        className="flex items-center gap-2 cursor-pointer"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleOpenEdit(item);
+                          handleToggleAvailable(item);
                         }}
-                        className="rounded-xl text-xs font-bold gap-1.5 h-8 border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all cursor-pointer"
+                        title={item.is_available ? "Tandai Stok Habis" : "Tandai Stok Tersedia"}
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
-                        <span>Kelola Menu</span>
-                      </Button>
+                        <Switch
+                          checked={item.is_available}
+                          onCheckedChange={() => handleToggleAvailable(item)}
+                          disabled={!canUpdate}
+                          aria-label={`Status stok ${item.name}`}
+                        />
+                        <Badge
+                          variant="outline"
+                          className={`text-xs font-semibold ${
+                            item.is_available
+                              ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-300"
+                              : "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-300"
+                          }`}
+                        >
+                          {item.is_available ? "Tersedia" : "Habis"}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleFeatured(item);
+                        }}
+                        title={item.is_featured ? "Hapus dari Menu Unggulan" : "Jadikan Menu Unggulan"}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
+                          item.is_featured
+                            ? "bg-amber-500 text-white shadow-2xs"
+                            : "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-amber-500"
+                        }`}
+                      >
+                        <Star className={`w-3.5 h-3.5 ${item.is_featured ? "fill-current" : ""}`} />
+                        <span>{item.is_featured ? "Unggulan" : "Biasa"}</span>
+                      </button>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenEdit(item);
+                          }}
+                          className="rounded-xl text-xs font-bold gap-1.5 h-8 border-border hover:bg-primary hover:text-primary-foreground hover:border-primary transition-all cursor-pointer shadow-2xs"
+                          title="Kelola & Edit Menu"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span>Edit</span>
+                        </Button>
+
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon-xs"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setItemToDelete(item);
+                            }}
+                            className="size-8 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
+                            title="Hapus Menu"
+                            aria-label={`Hapus ${item.name}`}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

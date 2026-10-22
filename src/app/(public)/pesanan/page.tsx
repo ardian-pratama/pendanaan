@@ -336,7 +336,7 @@ export default function OrderHistoryPage() {
   };
 
   return (
-    <main className="w-full pt-24 pb-20 bg-surface min-h-[85vh]">
+    <main className="w-full pt-24 pb-32 sm:pb-24 bg-surface min-h-[85vh]">
       {/* Floating Notification when QR is scanned & completed by admin */}
       {completedNotice && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] p-4 rounded-2xl bg-emerald-600 text-white shadow-2xl flex items-center justify-between gap-3 animate-in fade-in slide-in-from-top-4">

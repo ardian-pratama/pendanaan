@@ -61,7 +61,8 @@ export default function MenuCatalogPage() {
     async function loadData() {
       if (
         !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-        !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+        (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+          !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
       ) {
         setLoading(false);
         return;
@@ -152,7 +153,7 @@ export default function MenuCatalogPage() {
   }, [items, category, search, sortBy]);
 
   return (
-    <main id="main-content" className="w-full pt-20 sm:pt-24 pb-20 bg-surface min-h-screen" tabIndex={-1}>
+    <main id="main-content" className="w-full pt-20 sm:pt-24 pb-32 sm:pb-24 bg-surface min-h-screen" tabIndex={-1}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col gap-6">
 
         {/* Breadcrumb */}

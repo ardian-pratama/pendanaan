@@ -23,13 +23,7 @@ import type { UserRole, PermissionKey } from "@/lib/supabase/database.types";
  */
 export async function GET(request: NextRequest) {
   const siteUrl = getSiteUrl(request);
-  const baseOrigin =
-    process.env.NODE_ENV === "production" &&
-    request.nextUrl.origin.includes("localhost") &&
-    siteUrl &&
-    !siteUrl.includes("localhost")
-      ? siteUrl
-      : request.nextUrl.origin;
+  const baseOrigin = siteUrl || request.nextUrl.origin;
 
   const createRedirect = (pathWithSearch: string) => {
     return NextResponse.redirect(new URL(pathWithSearch, baseOrigin));

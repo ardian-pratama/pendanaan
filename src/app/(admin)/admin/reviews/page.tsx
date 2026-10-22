@@ -486,7 +486,7 @@ export default function AdminReviewsPage() {
                   </div>
 
                   {/* Comment Text & Tags */}
-                  <div className="text-xs sm:text-sm text-foreground/90 leading-relaxed pl-0 sm:pl-13">
+                  <div className="text-xs sm:text-sm text-foreground/90 leading-relaxed pl-0 sm:pl-[52px]">
                     <p>{review.comment}</p>
                     {review.tags && review.tags.length > 0 && (
                       <div className="flex items-center gap-1.5 flex-wrap pt-2">
@@ -503,7 +503,7 @@ export default function AdminReviewsPage() {
                   </div>
 
                   {/* Comments Thread (Sub-comments) */}
-                  <div className="pl-0 sm:pl-13 space-y-2.5 pt-1">
+                  <div className="pl-0 sm:pl-[52px] space-y-2.5 pt-1">
                     {reviewComments.length > 0 && (
                       <div className="space-y-2 rounded-2xl bg-muted/40 p-3.5 border border-border/80">
                         <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider block">
