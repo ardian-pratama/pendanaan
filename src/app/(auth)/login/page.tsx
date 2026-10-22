@@ -139,45 +139,55 @@ export default function LoginPage() {
                 borderColor: "rgba(167,139,250,0.4)",
               }}
             >
-              <TrendingUp className="w-3 h-3" aria-hidden="true" />
-              Pemesanan Dana Olimpiade 27
+              <ShoppingBag className="w-3 h-3" aria-hidden="true" />
+              Stand Kuliner Resmi Olimpiade 27
             </div>
           </div>
 
           <p className="text-sm text-on-surface-variant leading-relaxed max-w-sm">
-            Sarana pemesanan makanan dan minuman praktis di kampus sekaligus penggalangan dana
-            mandiri untuk menyukseskan rangkaian kegiatan Olimpiade Matematika ke-27 (Olimpiade 27).
+            Sarana pemesanan makanan dan minuman praktis di area kampus dengan sistem antrean cerdas
+            untuk mendukung kenyamanan peserta, panitia, dan pengunjung Olimpiade Matematika ke-27.
           </p>
 
-          {/* Mini progress card */}
+          {/* Service Feature Highlights Card */}
           <div
-            className="p-4 rounded-2xl max-w-sm"
+            className="p-4 rounded-2xl max-w-sm space-y-2.5"
             style={{
-              background: "rgba(255,255,255,0.85)",
+              background: "rgba(255,255,255,0.88)",
               backdropFilter: "blur(8px)",
               border: "1px solid rgba(202,196,216,0.5)",
               boxShadow: "0 4px 20px -4px rgba(124,58,237,0.12)",
             }}
           >
-            <div className="flex items-center justify-between text-xs mb-2">
-              <span className="text-on-surface-variant font-semibold flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-primary" aria-hidden="true" />
-                Target Dana Olimpiade 27
+            <div className="flex items-center justify-between text-xs pb-1 border-b border-border/50">
+              <span className="text-foreground font-bold flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" aria-hidden="true" />
+                Kemudahan Layanan Booth
               </span>
-              <span className="font-bold text-primary">74%</span>
+              <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                Stand Kampus
+              </span>
             </div>
-            <div className="w-full h-2 rounded-full bg-surface-container-high overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-1000"
-                style={{
-                  width: "74%",
-                  background: "linear-gradient(90deg, #7C3AED 0%, #A855F7 100%)",
-                }}
-              />
-            </div>
-            <div className="flex justify-between items-center text-[11px] text-on-surface-variant mt-2">
-              <span>Rp 14,8 Jt terkumpul</span>
-              <span className="font-medium">Target Rp 20 Jt</span>
+            
+            <div className="space-y-2 text-xs text-on-surface-variant">
+              <div className="flex items-start gap-2">
+                <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold">
+                  1
+                </div>
+                <div>
+                  <span className="font-semibold text-foreground">Pengambilan Cepat via QR</span>
+                  <p className="text-[11px] text-muted-foreground">Tunjukkan tiket digital saat tiba di booth tanpa antre panjang.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="size-5 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 mt-0.5 text-[10px] font-bold">
+                  2
+                </div>
+                <div>
+                  <span className="font-semibold text-foreground">Live Chat &amp; Status Realtime</span>
+                  <p className="text-[11px] text-muted-foreground">Pantau proses pembuatan pesanan langsung bersama panitia.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

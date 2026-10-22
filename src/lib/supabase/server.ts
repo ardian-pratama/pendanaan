@@ -6,14 +6,15 @@ import type { Database } from "./database.types";
 export async function createClient() {
   const cookieStore = await cookies();
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
   const key =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    "placeholder-key";
 
-  if (!url || !key) {
-    throw new Error(
-      "Missing Supabase URL or anon/publishable key"
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)) {
+    console.warn(
+      "[Supabase Server] Missing Supabase URL or anon/publishable key. Using fallback client."
     );
   }
 

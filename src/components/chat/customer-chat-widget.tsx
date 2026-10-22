@@ -16,6 +16,8 @@ import {
   Clock,
   Sparkles,
   Minimize2,
+  Check,
+  CheckCheck,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -27,6 +29,7 @@ interface ChatMessage {
   sender_name: string;
   sender_role: "customer" | "admin" | "staff" | string;
   message: string;
+  is_read?: boolean;
   created_at: string;
 }
 
@@ -90,6 +93,21 @@ export function CustomerChatWidget() {
     }
   }, []);
 
+  // Mark unread messages as read when customer views chat
+  const markMessagesAsRead = useCallback(async (sid: string) => {
+    if (!sid) return;
+    try {
+      const supabase = createClient();
+      await (supabase.from("chat_messages") as any)
+        .update({ is_read: true })
+        .eq("session_id", sid)
+        .neq("sender_role", "customer")
+        .eq("is_read", false);
+    } catch (err) {
+      console.warn("Gagal menandai pesan dibaca:", err);
+    }
+  }, []);
+
   useEffect(() => {
     if (!sessionId) return;
     loadMessages(sessionId);
@@ -109,13 +127,48 @@ export function CustomerChatWidget() {
           const newMsg = payload.new as ChatMessage;
           if (newMsg) {
             setMessages((prev) => {
+              // 1. If already in state with real ID, skip
               if (prev.some((m) => m.id === newMsg.id)) return prev;
+
+              // 2. If there is a matching temporary optimistic message, replace it!
+              const tempIdx = prev.findIndex(
+                (m) =>
+                  m.id.startsWith("temp-") &&
+                  m.message === newMsg.message &&
+                  m.sender_role === newMsg.sender_role
+              );
+
+              if (tempIdx !== -1) {
+                const updated = [...prev];
+                updated[tempIdx] = newMsg;
+                return updated;
+              }
+
               return [...prev, newMsg];
             });
 
             if (!open && (newMsg.sender_role === "admin" || newMsg.sender_role === "staff")) {
               setUnreadCount((prev) => prev + 1);
+            } else if (open && (newMsg.sender_role === "admin" || newMsg.sender_role === "staff")) {
+              markMessagesAsRead(sessionId);
             }
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "chat_messages",
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const updatedMsg = payload.new as ChatMessage;
+          if (updatedMsg) {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m))
+            );
           }
         }
       )
@@ -124,14 +177,17 @@ export function CustomerChatWidget() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sessionId, open, loadMessages]);
+  }, [sessionId, open, loadMessages, markMessagesAsRead]);
 
   useEffect(() => {
     if (open) {
       setUnreadCount(0);
+      if (sessionId) {
+        markMessagesAsRead(sessionId);
+      }
       messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, [open, messages]);
+  }, [open, messages, sessionId, markMessagesAsRead]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,13 +199,15 @@ export function CustomerChatWidget() {
 
     const effectiveSenderName = customerName.trim() || "Pelanggan Stand";
     const senderRole = isStaffOrAdmin ? "admin" : "customer";
+    const tempId = `temp-${Date.now()}`;
 
     const optimisticMsg: ChatMessage = {
-      id: `temp-${Date.now()}`,
+      id: tempId,
       session_id: sessionId,
       sender_name: effectiveSenderName,
       sender_role: senderRole,
       message: text,
+      is_read: false,
       created_at: new Date().toISOString(),
     };
 
@@ -157,13 +215,23 @@ export function CustomerChatWidget() {
 
     try {
       const supabase = createClient();
-      await (supabase.from("chat_messages" as any) as any).insert({
-        session_id: sessionId,
-        sender_id: user?.id || null,
-        sender_name: effectiveSenderName,
-        sender_role: senderRole,
-        message: text,
-      });
+      const { data, error } = await (supabase.from("chat_messages" as any) as any)
+        .insert({
+          session_id: sessionId,
+          sender_id: user?.id || null,
+          sender_name: effectiveSenderName,
+          sender_role: senderRole,
+          message: text,
+          is_read: false,
+        })
+        .select()
+        .single();
+
+      if (!error && data) {
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? (data as ChatMessage) : m))
+        );
+      }
     } catch (err) {
       console.warn("Gagal mengirim pesan chat:", err);
     } finally {
@@ -330,13 +398,38 @@ export function CustomerChatWidget() {
                       </div>
 
                       <div
-                        className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-xs whitespace-pre-wrap ${
+                        className={`p-3.5 rounded-2xl text-xs leading-relaxed shadow-xs whitespace-pre-wrap flex flex-col gap-1.5 ${
                           isSender
                             ? "bg-primary text-primary-foreground rounded-br-xs"
                             : "bg-card border border-border text-foreground rounded-bl-xs"
                         }`}
                       >
-                        {msg.message}
+                        <p>{msg.message}</p>
+                        <div className={`flex items-center gap-1.5 self-end text-[9px] ${isSender ? "text-white/80" : "text-muted-foreground"}`}>
+                          <span>
+                            {new Date(msg.created_at).toLocaleTimeString("id-ID", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                          {isSender && (
+                            msg.id.startsWith("temp-") ? (
+                              <span className="inline-flex items-center gap-0.5 opacity-80" title="Mengirim...">
+                                <Clock className="w-2.5 h-2.5 animate-spin" />
+                              </span>
+                            ) : msg.is_read ? (
+                              <span className="inline-flex items-center gap-0.5 text-sky-200 font-bold" title="Dibaca Panitia">
+                                <CheckCheck className="w-3 h-3 text-sky-300" />
+                                <span>Dibaca</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-0.5 text-white/70 font-medium" title="Terkirim">
+                                <Check className="w-3 h-3" />
+                                <span>Terkirim</span>
+                              </span>
+                            )
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>

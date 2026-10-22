@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition, useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminTopBar } from "@/components/admin/admin-sidebar";
 import {
   fetchAdminOrders,
@@ -13,6 +14,26 @@ import { hasPermission } from "@/lib/auth/permissions";
 import { createClient } from "@/lib/supabase/client";
 import type { UserProfile } from "@/lib/supabase/database.types";
 import { formatRupiah } from "@/lib/data/menu-data";
+import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +59,7 @@ import {
   RefreshCw,
   CheckCircle2,
   ArrowUpRight,
-  PieChart,
+  PieChart as PieChartIcon,
   Award,
   Plus,
   Trash2,
@@ -56,6 +77,9 @@ import {
   Tag,
   Calendar,
   FileText,
+  Download,
+  Filter,
+  BarChart3,
 } from "lucide-react";
 
 export interface ExpenseRecord {
@@ -71,12 +95,58 @@ export interface ExpenseRecord {
 }
 
 export default function AdminReportsPage() {
-  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [orders, setOrders] = useState<OrderWithItems[]>([]);
-  const [expenses, setExpenses] = useState<ExpenseRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  // Expense management state
+  // Date Range Filter State
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "7days" | "30days">("all");
+
+  // 1. TanStack Query: Orders
+  const {
+    data: orders = [],
+    isLoading: ordersLoading,
+    isRefetching: ordersRefetching,
+    refetch: refetchOrders,
+  } = useQuery<OrderWithItems[]>({
+    queryKey: ["admin-reports-orders"],
+    queryFn: async () => {
+      return await fetchAdminOrders();
+    },
+    staleTime: 1000 * 30,
+  });
+
+  // 2. TanStack Query: Current User Profile
+  const { data: currentUser = null } = useQuery<UserProfile | null>({
+    queryKey: ["admin-reports-profile"],
+    queryFn: async () => {
+      return await getCurrentUserProfile();
+    },
+    staleTime: 1000 * 60 * 5,
+  });
+
+  // 3. TanStack Query: Expenses
+  const {
+    data: expenses = [],
+    isLoading: expensesLoading,
+    isRefetching: expensesRefetching,
+    refetch: refetchExpenses,
+  } = useQuery<ExpenseRecord[]>({
+    queryKey: ["admin-reports-expenses"],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("expenses")
+        .select("*")
+        .order("expense_date", { ascending: false });
+      if (error) throw error;
+      return (data || []) as ExpenseRecord[];
+    },
+    staleTime: 1000 * 30,
+  });
+
+  const loading = ordersLoading || expensesLoading;
+  const isRefreshing = ordersRefetching || expensesRefetching;
+
+  // Expense modal management state
   const [expenseModalOpen, setExpenseModalOpen] = useState(false);
   const [expenseTitle, setExpenseTitle] = useState("");
   const [expenseCategory, setExpenseCategory] = useState("bahan_baku");
@@ -85,12 +155,16 @@ export default function AdminReportsPage() {
   const [expenseNotes, setExpenseNotes] = useState("");
   const [currentDateStr, setCurrentDateStr] = useState("");
   const [currentYear, setCurrentYear] = useState<number>(2026);
+  const [currentTimestamp, setCurrentTimestamp] = useState<number>(0);
 
   useEffect(() => {
-    setExpenseDate(new Date().toISOString().split("T")[0]);
-    setCurrentDateStr(new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }));
-    setCurrentYear(new Date().getFullYear());
+    const now = new Date();
+    setExpenseDate(now.toISOString().split("T")[0]);
+    setCurrentDateStr(now.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }));
+    setCurrentYear(now.getFullYear());
+    setCurrentTimestamp(now.getTime());
   }, []);
+
   const [savingExpense, setSavingExpense] = useState(false);
   const [deleteExpenseId, setDeleteExpenseId] = useState<string | null>(null);
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState("all");
@@ -98,80 +172,93 @@ export default function AdminReportsPage() {
   const [printPreviewOpen, setPrintPreviewOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSaving, startTransition] = useTransition();
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setErrorMessage(null);
-    try {
-      const supabase = createClient();
-      const [ordersData, profile, { data: expensesData }] = await Promise.all([
-        fetchAdminOrders(),
-        getCurrentUserProfile(),
-        supabase.from("expenses").select("*").order("expense_date", { ascending: false }),
-      ]);
-      setOrders(ordersData);
-      if (profile) setCurrentUser(profile);
-      if (expensesData) setExpenses(expensesData as ExpenseRecord[]);
-    } catch (err: unknown) {
-      setErrorMessage(
-        getFriendlyErrorMessage(
-          err,
-          "Gagal memuat data laporan dana & keuangan. Periksa koneksi internet Anda."
-        )
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const handleRefreshAll = async () => {
+    await Promise.all([refetchOrders(), refetchExpenses()]);
+    showToast("Data laporan berhasil diperbarui");
+  };
 
+  // Realtime Supabase Subscription to auto-invalidate TanStack cache
   useEffect(() => {
-    loadData();
-
-    // Realtime listener for expenses
     const supabase = createClient();
-    const expChannel = supabase
-      .channel("expenses-realtime")
+    const channel = supabase
+      .channel("reports-realtime-sync")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "expenses" },
         () => {
-          supabase
-            .from("expenses")
-            .select("*")
-            .order("expense_date", { ascending: false })
-            .then(({ data }) => {
-              if (data) setExpenses(data as ExpenseRecord[]);
-            });
+          queryClient.invalidateQueries({ queryKey: ["admin-reports-expenses"] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-reports-orders"] });
         }
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(expChannel);
+      supabase.removeChannel(channel);
     };
-  }, [loadData]);
+  }, [queryClient]);
 
   const canEdit = hasPermission(currentUser, "reports:edit");
   const canView = hasPermission(currentUser, "reports:view");
 
+  // Date-filtered datasets
+  const dateFilteredOrders = useMemo(() => {
+    if (dateFilter === "all" || !currentTimestamp) return orders;
+    return orders.filter((o) => {
+      const orderTime = new Date(o.created_at).getTime();
+      if (dateFilter === "today") {
+        return new Date(o.created_at).toDateString() === new Date(currentTimestamp).toDateString();
+      }
+      if (dateFilter === "7days") {
+        return currentTimestamp - orderTime <= 7 * 24 * 60 * 60 * 1000;
+      }
+      if (dateFilter === "30days") {
+        return currentTimestamp - orderTime <= 30 * 24 * 60 * 60 * 1000;
+      }
+      return true;
+    });
+  }, [orders, dateFilter, currentTimestamp]);
+
+  const dateFilteredExpenses = useMemo(() => {
+    if (dateFilter === "all" || !currentTimestamp) return expenses;
+    return expenses.filter((e) => {
+      const expTime = new Date(e.expense_date).getTime();
+      if (dateFilter === "today") {
+        return new Date(e.expense_date).toDateString() === new Date(currentTimestamp).toDateString();
+      }
+      if (dateFilter === "7days") {
+        return currentTimestamp - expTime <= 7 * 24 * 60 * 60 * 1000;
+      }
+      if (dateFilter === "30days") {
+        return currentTimestamp - expTime <= 30 * 24 * 60 * 60 * 1000;
+      }
+      return true;
+    });
+  }, [expenses, dateFilter, currentTimestamp]);
+
   // Order Revenue Calculations
   const validOrders = useMemo(
-    () => orders.filter((o) => o.status !== "cancelled"),
-    [orders]
+    () => dateFilteredOrders.filter((o) => o.status !== "cancelled"),
+    [dateFilteredOrders]
   );
   const completedOrders = useMemo(
-    () => orders.filter((o) => o.status === "selesai" || o.status === "completed"),
-    [orders]
+    () => dateFilteredOrders.filter((o) => o.status === "selesai" || o.status === "completed"),
+    [dateFilteredOrders]
   );
   const pendingOrders = useMemo(
-    () => orders.filter((o) => o.status === "menunggu_pembayaran" || o.status === "pending"),
-    [orders]
+    () => dateFilteredOrders.filter((o) => o.status === "menunggu_pembayaran" || o.status === "pending"),
+    [dateFilteredOrders]
   );
 
   const totalRevenue = useMemo(
@@ -186,8 +273,8 @@ export default function AdminReportsPage() {
 
   // Expenses & Profit Calculations
   const totalExpenses = useMemo(
-    () => expenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0),
-    [expenses]
+    () => dateFilteredExpenses.reduce((sum, e) => sum + (Number(e.amount) || 0), 0),
+    [dateFilteredExpenses]
   );
 
   const netProfit = useMemo(
@@ -200,9 +287,9 @@ export default function AdminReportsPage() {
   }, [totalRevenue, totalExpenses]);
 
   const filteredExpenses = useMemo(() => {
-    if (expenseCategoryFilter === "all") return expenses;
-    return expenses.filter((e) => e.category === expenseCategoryFilter);
-  }, [expenses, expenseCategoryFilter]);
+    if (expenseCategoryFilter === "all") return dateFilteredExpenses;
+    return dateFilteredExpenses.filter((e) => e.category === expenseCategoryFilter);
+  }, [dateFilteredExpenses, expenseCategoryFilter]);
 
   const handleSaveExpense = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -222,7 +309,7 @@ export default function AdminReportsPage() {
         .select()
         .single();
       if (!error && data) {
-        setExpenses((prev) => [data as ExpenseRecord, ...prev]);
+        queryClient.invalidateQueries({ queryKey: ["admin-reports-expenses"] });
         showToast("Pengeluaran berhasil dicatat");
         setExpenseModalOpen(false);
         setExpenseTitle("");
@@ -240,7 +327,7 @@ export default function AdminReportsPage() {
     try {
       const supabase = createClient();
       await (supabase.from("expenses") as any).delete().eq("id", id);
-      setExpenses((prev) => prev.filter((e) => e.id !== id));
+      queryClient.invalidateQueries({ queryKey: ["admin-reports-expenses"] });
       showToast("Data pengeluaran berhasil dihapus");
       setDeleteExpenseId(null);
     } catch (err) {
@@ -269,6 +356,157 @@ export default function AdminReportsPage() {
     }
     return stats;
   }, [validOrders]);
+
+  // Chart 1: Daily Cashflow Data (AreaChart)
+  const dailyCashFlowData = useMemo(() => {
+    const dayMap = new Map<string, { date: string; pemasukan: number; pengeluaran: number; rawDate: string }>();
+
+    validOrders.forEach((o) => {
+      const d = new Date(o.created_at);
+      const key = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      const cur = dayMap.get(key) || { date: label, pemasukan: 0, pengeluaran: 0, rawDate: key };
+      cur.pemasukan += o.total_amount || 0;
+      dayMap.set(key, cur);
+    });
+
+    dateFilteredExpenses.forEach((e) => {
+      const d = new Date(e.expense_date);
+      const key = d.toISOString().split("T")[0];
+      const label = d.toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+      const cur = dayMap.get(key) || { date: label, pemasukan: 0, pengeluaran: 0, rawDate: key };
+      cur.pengeluaran += Number(e.amount) || 0;
+      dayMap.set(key, cur);
+    });
+
+    const list = Array.from(dayMap.values()).sort(
+      (a, b) => new Date(a.rawDate).getTime() - new Date(b.rawDate).getTime()
+    );
+
+    return list.length > 0
+      ? list
+      : [{ date: "Hari Ini", pemasukan: 0, pengeluaran: 0, rawDate: "2026-01-01" }];
+  }, [validOrders, dateFilteredExpenses]);
+
+  const cashflowChartConfig: ChartConfig = {
+    pemasukan: {
+      label: "Kas Masuk (Omzet)",
+      color: "#10b981",
+    },
+    pengeluaran: {
+      label: "Kas Keluar (Beban)",
+      color: "#f43f5e",
+    },
+  };
+
+  // Chart 2: Expense Category Pie Data
+  const expensePieData = useMemo(() => {
+    const catMap = new Map<string, number>();
+    dateFilteredExpenses.forEach((e) => {
+      const label = e.category.replace("_", " ").toUpperCase();
+      catMap.set(label, (catMap.get(label) || 0) + (Number(e.amount) || 0));
+    });
+
+    const palette = ["#7c3aed", "#ec4899", "#06b6d4", "#10b981", "#f59e0b", "#6366f1", "#8b5cf6"];
+    const arr = Array.from(catMap.entries()).map(([name, value], i) => ({
+      name,
+      value: Math.max(0, value),
+      fill: palette[i % palette.length],
+    }));
+
+    return arr.length > 0 ? arr : [{ name: "TIDAK ADA BEBAN", value: 1, fill: "#e2e8f0" }];
+  }, [dateFilteredExpenses]);
+
+  const expensePieConfig: ChartConfig = useMemo(() => {
+    const cfg: ChartConfig = {};
+    expensePieData.forEach((item) => {
+      cfg[item.name] = {
+        label: item.name,
+        color: item.fill,
+      };
+    });
+    return cfg;
+  }, [expensePieData]);
+
+  // Chart 3: Payment Method Bar Data
+  const paymentBarData = useMemo(() => {
+    return [
+      {
+        method: "QRIS",
+        nominal: paymentMethodStats.qris.total,
+        transaksi: paymentMethodStats.qris.count,
+        fill: "#7c3aed",
+      },
+      {
+        method: "Transfer Bank",
+        nominal: paymentMethodStats.transfer.total,
+        transaksi: paymentMethodStats.transfer.count,
+        fill: "#06b6d4",
+      },
+      {
+        method: "Tunai di Stand",
+        nominal: paymentMethodStats.tunai.total,
+        transaksi: paymentMethodStats.tunai.count,
+        fill: "#10b981",
+      },
+    ];
+  }, [paymentMethodStats]);
+
+  const paymentBarConfig: ChartConfig = {
+    nominal: {
+      label: "Total Omzet (Rp)",
+      color: "#7c3aed",
+    },
+  };
+
+  // Export CSV functions
+  const exportCashFlowCSV = () => {
+    const headers = ["ID", "Tanggal", "Uraian Transaksi", "Kategori", "Tipe", "Debit (Masuk)", "Kredit (Keluar)"];
+    const rows = cashFlowLedger.map((entry) => [
+      entry.id,
+      new Date(entry.date).toLocaleString("id-ID"),
+      `"${entry.title.replace(/"/g, '""')}"`,
+      `"${entry.category}"`,
+      entry.type === "in" ? "Pemasukan" : "Pengeluaran",
+      entry.type === "in" ? entry.amount : 0,
+      entry.type === "out" ? entry.amount : 0,
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Buku-Kas-MathBites-${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("File CSV Buku Kas berhasil diunduh");
+  };
+
+  const exportExpensesCSV = () => {
+    const headers = ["ID", "Tanggal", "Item Belanja", "Kategori", "Jumlah (Rp)", "Catatan", "Dicatat Oleh"];
+    const rows = expenses.map((e) => [
+      e.id,
+      e.expense_date,
+      `"${e.title.replace(/"/g, '""')}"`,
+      e.category,
+      e.amount,
+      `"${(e.notes || "").replace(/"/g, '""')}"`,
+      `"${e.created_by || ""}"`,
+    ]);
+
+    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Beban-Pengeluaran-${new Date().toISOString().split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast("File CSV Beban Pengeluaran berhasil diunduh");
+  };
 
   // Comprehensive Cash Flow Ledger (Mutasi Kas Masuk & Keluar)
   const cashFlowLedger = useMemo(() => {
@@ -487,7 +725,7 @@ export default function AdminReportsPage() {
         {errorMessage && (
           <ErrorBanner
             message={errorMessage}
-            onRetry={loadData}
+            onRetry={handleRefreshAll}
             onDismiss={() => setErrorMessage(null)}
           />
         )}
@@ -513,37 +751,89 @@ export default function AdminReportsPage() {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => loadData()}
-              className="gap-1.5 text-xs font-semibold rounded-xl border-border bg-card shadow-2xs"
+              onClick={handleRefreshAll}
+              disabled={isRefreshing}
+              className="gap-1.5 text-xs font-semibold rounded-xl border-border bg-card shadow-2xs cursor-pointer"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
               <span>Segarkan</span>
             </Button>
 
             <Button
               variant="outline"
               size="sm"
+              onClick={exportCashFlowCSV}
+              className="gap-1.5 text-xs font-semibold rounded-xl border-border bg-card shadow-2xs hover:bg-accent cursor-pointer"
+              title="Unduh Buku Kas format CSV untuk Excel"
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Buku Kas (CSV)</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportExpensesCSV}
+              className="gap-1.5 text-xs font-semibold rounded-xl border-border bg-card shadow-2xs hover:bg-accent cursor-pointer"
+              title="Unduh data pengeluaran beban kas format CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-rose-600" />
+              <span>Beban (CSV)</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setPrintPreviewOpen(true)}
-              className="gap-1.5 text-xs font-semibold rounded-xl border-border bg-card shadow-2xs print:hidden"
+              className="gap-1.5 text-xs font-semibold rounded-xl border-border bg-card shadow-2xs print:hidden cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5 text-primary" />
-              <span>Cetak Ringkasan</span>
+              <span>Cetak Dokumen</span>
             </Button>
 
             {canEdit && (
               <Button
                 size="sm"
                 onClick={() => setExpenseModalOpen(true)}
-                className="gap-1.5 text-xs font-bold rounded-xl shadow-xs"
+                className="gap-1.5 text-xs font-bold rounded-xl shadow-xs cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Catat Beban Kas</span>
               </Button>
             )}
+          </div>
+        </div>
+
+        {/* Date Filter Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl bg-card border border-border/70 shadow-2xs">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-primary" />
+            <span className="text-xs font-bold text-foreground">Rentang Periode Laporan:</span>
+          </div>
+          <div className="flex items-center gap-1.5 bg-muted/60 p-1 rounded-xl self-start sm:self-auto flex-wrap">
+            {[
+              { id: "all", label: "Semua Waktu" },
+              { id: "today", label: "Hari Ini" },
+              { id: "7days", label: "7 Hari Terakhir" },
+              { id: "30days", label: "30 Hari Terakhir" },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setDateFilter(f.id as any)}
+                className={`text-xs px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                  dateFilter === f.id
+                    ? "bg-card text-foreground shadow-2xs"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -744,6 +1034,122 @@ export default function AdminReportsPage() {
 
           {/* TAB 2: Analisis Penjualan & Arus Kas */}
           <TabsContent value="sales" className="mt-0 flex flex-col gap-6">
+            {/* Visualisasi Grafik Arus Kas & Kanal Pembayaran */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+              {/* Grafik 1: Tren Arus Kas Masuk vs Keluar Harian */}
+              <Card className="lg:col-span-2 p-5 rounded-2xl border-border bg-card shadow-xs flex flex-col justify-between">
+                <CardHeader className="p-0 pb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-500" />
+                        <span>Tren Arus Kas Masuk vs Kas Keluar Harian</span>
+                      </CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                        Perbandingan omzet penjualan stand (masuk) dengan pengeluaran belanja operasional (keluar).
+                      </CardDescription>
+                    </div>
+                    <Badge variant="outline" className="text-xs font-semibold self-start sm:self-auto bg-primary/5 text-primary border-primary/20">
+                      Grafik Dinamis
+                    </Badge>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-0 pt-2">
+                  <ChartContainer config={cashflowChartConfig} className="h-64 sm:h-72 w-full">
+                    <AreaChart data={dailyCashFlowData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="fillPemasukan" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.1} />
+                        </linearGradient>
+                        <linearGradient id="fillPengeluaran" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#f43f5e" stopOpacity={0.8} />
+                          <stop offset="95%" stopColor="#f43f5e" stopOpacity={0.1} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/40" />
+                      <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} className="text-[10px]" />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        className="text-[10px]"
+                        tickFormatter={(v) => (v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v)}
+                      />
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            formatter={(value, name) => (
+                              <div className="flex items-center justify-between gap-2 w-full">
+                                <span className="text-muted-foreground">{name === "pemasukan" ? "Kas Masuk" : "Kas Keluar"}:</span>
+                                <span className="font-bold">{formatRupiah(Number(value) || 0)}</span>
+                              </div>
+                            )}
+                          />
+                        }
+                      />
+                      <ChartLegend content={<ChartLegendContent />} />
+                      <Area type="monotone" dataKey="pemasukan" stroke="#10b981" fillOpacity={1} fill="url(#fillPemasukan)" strokeWidth={2} />
+                      <Area type="monotone" dataKey="pengeluaran" stroke="#f43f5e" fillOpacity={1} fill="url(#fillPengeluaran)" strokeWidth={2} />
+                    </AreaChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+
+              {/* Grafik 2: Kanal Pembayaran */}
+              <Card className="p-5 rounded-2xl border-border bg-card shadow-xs flex flex-col justify-between">
+                <CardHeader className="p-0 pb-4">
+                  <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-primary" />
+                    <span>Omzet Per Metode Bayar</span>
+                  </CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                    Komparasi nominal penjualan berdasarkan kanal transaksi.
+                  </CardDescription>
+                </CardHeader>
+
+                <CardContent className="p-0 pt-2">
+                  <ChartContainer config={paymentBarConfig} className="h-64 sm:h-72 w-full">
+                    <BarChart data={paymentBarData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/40" />
+                      <XAxis dataKey="method" tickLine={false} axisLine={false} tickMargin={8} className="text-[10px]" />
+                      <YAxis
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        className="text-[10px]"
+                        tickFormatter={(v) => (v >= 1000000 ? `${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v)}
+                      />
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            formatter={(value, name, item) => (
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="text-muted-foreground">Total:</span>
+                                  <span className="font-bold">{formatRupiah(Number(value) || 0)}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-2 text-[10px]">
+                                  <span className="text-muted-foreground">Volume:</span>
+                                  <span>{item.payload.transaksi} order</span>
+                                </div>
+                              </div>
+                            )}
+                          />
+                        }
+                      />
+                      <Bar dataKey="nominal" radius={[8, 8, 0, 0]}>
+                        {paymentBarData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* QRIS */}
               <Card className="p-5 rounded-2xl border-border bg-card shadow-xs flex flex-col gap-2">
@@ -910,6 +1316,87 @@ export default function AdminReportsPage() {
                 </p>
               </Card>
             </div>
+
+            {/* Grafik Komposisi Beban Pengeluaran Stand (Donut PieChart) */}
+            <Card className="p-5 rounded-2xl border-border bg-card shadow-xs">
+              <CardHeader className="p-0 pb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <CardTitle className="text-base font-bold text-foreground flex items-center gap-2">
+                      <PieChartIcon className="w-4 h-4 text-rose-500" />
+                      <span>Komposisi Alokasi Beban Stand</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                      Distribusi persentase pengeluaran berdasarkan pos belanja (bahan baku, kemasan, dll).
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="text-xs font-semibold self-start sm:self-auto bg-rose-500/10 text-rose-600 border-rose-500/20">
+                    Total: {formatRupiah(totalExpenses)}
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-0 pt-2 flex flex-col md:flex-row items-center justify-around gap-6">
+                <div className="w-full md:w-1/2 flex justify-center">
+                  <ChartContainer config={expensePieConfig} className="h-56 sm:h-64 w-full max-w-xs">
+                    <PieChart>
+                      <ChartTooltip
+                        content={
+                          <ChartTooltipContent
+                            formatter={(value, name) => (
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-muted-foreground">{name}:</span>
+                                <span className="font-bold">{formatRupiah(Number(value) || 0)}</span>
+                              </div>
+                            )}
+                          />
+                        }
+                      />
+                      <Pie
+                        data={expensePieData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={50}
+                        outerRadius={80}
+                        paddingAngle={3}
+                      >
+                        {expensePieData.map((entry, index) => (
+                          <Cell key={`pie-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <ChartLegend content={<ChartLegendContent />} />
+                    </PieChart>
+                  </ChartContainer>
+                </div>
+
+                {/* Category List Stats */}
+                <div className="w-full md:w-1/2 flex flex-col gap-2">
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                    Rincian Pos Belanja:
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {expensePieData.map((item, idx) => {
+                      const pct = totalExpenses > 0 ? Math.round((item.value / totalExpenses) * 100) : 0;
+                      return (
+                        <div
+                          key={idx}
+                          className="p-2.5 rounded-xl bg-muted/40 border border-border/60 flex items-center justify-between gap-2"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: item.fill }} />
+                            <span className="text-xs font-semibold text-foreground truncate">{item.name}</span>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="text-xs font-bold text-foreground block">{formatRupiah(item.value)}</span>
+                            <span className="text-[10px] text-muted-foreground">{pct}%</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Expense Table Card with Filter & Add Button */}
             <Card className="rounded-2xl border-border bg-card shadow-xs overflow-hidden">

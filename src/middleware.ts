@@ -22,7 +22,15 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   if (!url || !key) {
-    throw new Error("Supabase environment variables are missing (URL or anon/publishable key)");
+    console.warn(
+      "[Middleware] Supabase environment variables are missing (NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY). Please configure them in your Vercel Project Settings."
+    );
+    if (request.nextUrl.pathname.startsWith("/admin")) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      return NextResponse.redirect(loginUrl);
+    }
+    return supabaseResponse;
   }
 
   const supabase = createServerClient(

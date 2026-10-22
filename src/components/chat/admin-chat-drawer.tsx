@@ -22,6 +22,7 @@ import {
   Sparkles,
   Clock,
   ArrowLeft,
+  Check,
   CheckCheck,
 } from "lucide-react";
 
@@ -178,10 +179,21 @@ export function AdminChatDrawer({
           if (activeSessionId && newMsg.session_id === activeSessionId) {
             setMessages((prev) => {
               if (prev.some((m) => m.id === newMsg.id)) return prev;
+              const tempIdx = prev.findIndex(
+                (m) =>
+                  m.id.startsWith("temp-") &&
+                  m.message === newMsg.message &&
+                  m.sender_role === newMsg.sender_role
+              );
+              if (tempIdx !== -1) {
+                const copy = [...prev];
+                copy[tempIdx] = newMsg;
+                return copy;
+              }
               return [...prev, newMsg];
             });
             // Mark as read immediately if admin has this session open
-            if (newMsg.sender_role !== "admin") {
+            if (newMsg.sender_role !== "admin" && newMsg.sender_role !== "staff") {
               (supabase.from("chat_messages") as any)
                 .update({ is_read: true })
                 .eq("id", newMsg.id)
@@ -223,6 +235,36 @@ export function AdminChatDrawer({
           });
         }
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "chat_messages",
+        },
+        (payload) => {
+          const updatedMsg = payload.new as ChatMessageItem;
+          if (!updatedMsg) return;
+
+          // Update in message thread
+          if (activeSessionId && updatedMsg.session_id === activeSessionId) {
+            setMessages((prev) =>
+              prev.map((m) => (m.id === updatedMsg.id ? { ...m, ...updatedMsg } : m))
+            );
+          }
+
+          // Update in session summaries if needed
+          if (updatedMsg.is_read) {
+            setSessions((prev) =>
+              prev.map((s) =>
+                s.session_id === updatedMsg.session_id && s.unread_count > 0
+                  ? { ...s, unread_count: Math.max(0, s.unread_count - 1) }
+                  : s
+              )
+            );
+          }
+        }
+      )
       .subscribe();
 
     return () => {
@@ -239,7 +281,21 @@ export function AdminChatDrawer({
     const text = (textToSend || inputText).trim();
     if (!text || !activeSessionId || sending) return;
 
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMsg: ChatMessageItem = {
+      id: tempId,
+      session_id: activeSessionId,
+      sender_name: adminName || "Admin Stand Booth",
+      sender_role: "admin",
+      message: text,
+      is_read: false,
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setInputText("");
     setSending(true);
+
     try {
       const supabase = createClient();
       const { data, error } = await (supabase.from("chat_messages") as any)
@@ -248,17 +304,15 @@ export function AdminChatDrawer({
           sender_name: adminName || "Admin Stand Booth",
           sender_role: "admin",
           message: text,
-          is_read: true,
+          is_read: false,
         })
         .select()
         .single();
 
       if (!error && data) {
-        setMessages((prev) => {
-          if (prev.some((m) => m.id === (data as any).id)) return prev;
-          return [...prev, data as ChatMessageItem];
-        });
-        setInputText("");
+        setMessages((prev) =>
+          prev.map((m) => (m.id === tempId ? (data as ChatMessageItem) : m))
+        );
       }
     } catch (err) {
       console.warn("Gagal mengirim pesan chat:", err);
@@ -280,7 +334,7 @@ export function AdminChatDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-2xl p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl"
+        className="w-full sm:!max-w-3xl md:!max-w-4xl lg:!max-w-5xl p-0 flex flex-col h-full bg-card border-l border-border shadow-2xl"
       >
         <SheetHeader className="p-4 pr-12 border-b border-border flex flex-row items-center justify-between space-y-0">
           <div>
@@ -298,7 +352,7 @@ export function AdminChatDrawer({
         <div className="flex-1 flex overflow-hidden">
           {/* SESSIONS LIST (Hidden on mobile if session is active) */}
           <div
-            className={`w-full sm:w-72 border-r border-border flex flex-col bg-muted/20 ${
+            className={`w-full sm:w-80 md:w-88 border-r border-border flex flex-col bg-muted/20 shrink-0 ${
               activeSessionId ? "hidden sm:flex" : "flex"
             }`}
           >
@@ -427,15 +481,23 @@ export function AdminChatDrawer({
                         }`}
                       >
                         {/* Shadcn Avatar */}
-                        <Avatar className={`size-7.5 shrink-0 border shadow-2xs ${
-                          isAdmin ? "border-primary/30" : "border-border"
-                        }`}>
-                          <AvatarFallback className={`text-[10px] font-bold ${
-                            isAdmin
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-muted text-foreground"
-                          }`}>
-                            {isAdmin ? <ShieldCheck className="w-3.5 h-3.5" /> : (m.sender_name || "PL").slice(0, 2).toUpperCase()}
+                        <Avatar
+                          className={`size-7.5 shrink-0 border shadow-2xs ${
+                            isAdmin ? "border-primary/30" : "border-border"
+                          }`}
+                        >
+                          <AvatarFallback
+                            className={`text-[10px] font-bold ${
+                              isAdmin
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted text-foreground"
+                            }`}
+                          >
+                            {isAdmin ? (
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                            ) : (
+                              (m.sender_name || "PL").slice(0, 2).toUpperCase()
+                            )}
                           </AvatarFallback>
                         </Avatar>
 
@@ -448,14 +510,10 @@ export function AdminChatDrawer({
                           <div className="flex items-center gap-1.5 mb-1 px-1">
                             <span className="text-[10px] font-semibold text-foreground/80">
                               {isAdmin
-                                ? (m.sender_name ? `${m.sender_name} (Panitia / Anda)` : "Panitia (Anda)")
+                                ? m.sender_name
+                                  ? `${m.sender_name} (Panitia / Anda)`
+                                  : "Panitia (Anda)"
                                 : `${m.sender_name || "Pelanggan"} (Pembeli)`}
-                            </span>
-                            <span className="text-[9px] text-muted-foreground">
-                              {new Date(m.created_at).toLocaleTimeString("id-ID", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
                             </span>
                           </div>
 
@@ -467,6 +525,38 @@ export function AdminChatDrawer({
                             }`}
                           >
                             <p>{m.message}</p>
+                            <div
+                              className={`flex items-center gap-1.5 mt-1.5 ${
+                                isAdmin
+                                  ? "justify-end text-primary-foreground/75"
+                                  : "justify-start text-muted-foreground"
+                              }`}
+                            >
+                              <span className="text-[9px]">
+                                {new Date(m.created_at).toLocaleTimeString("id-ID", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                              {isAdmin && (
+                                <span
+                                  className="inline-flex items-center gap-0.5 text-[9px]"
+                                  title={m.is_read ? "Dibaca oleh pelanggan" : "Terkirim ke pelanggan"}
+                                >
+                                  {m.is_read ? (
+                                    <>
+                                      <CheckCheck className="w-3 h-3 text-sky-200" />
+                                      <span className="text-sky-200 text-[8px] font-medium">Dibaca</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Check className="w-3 h-3 text-primary-foreground/70" />
+                                      <span className="text-primary-foreground/70 text-[8px]">Terkirim</span>
+                                    </>
+                                  )}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
