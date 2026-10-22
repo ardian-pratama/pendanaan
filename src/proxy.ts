@@ -47,7 +47,17 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
+  const { pathname, searchParams } = request.nextUrl;
+
+  // ── Intercept OAuth callback code if delivered to root or wrong route ──
+  const code = searchParams.get("code");
+  if (code && pathname !== "/auth/callback") {
+    const callbackUrl = new URL("/auth/callback", request.nextUrl.origin);
+    searchParams.forEach((val, key) => {
+      callbackUrl.searchParams.set(key, val);
+    });
+    return NextResponse.redirect(callbackUrl);
+  }
 
   // ── Protect /admin routes ─────────────────────────────────────
   if (

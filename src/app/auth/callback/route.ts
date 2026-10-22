@@ -22,8 +22,8 @@ import type { UserRole, PermissionKey } from "@/lib/supabase/database.types";
  *    - Pelanggan biasa → / (atau parameter `next`)
  */
 export async function GET(request: NextRequest) {
-  const siteUrl = getSiteUrl(request);
-  const baseOrigin = siteUrl || request.nextUrl.origin;
+  // Gunakan origin request saat ini agar user tetap berada di environment yang sama (localhost vs production domain)
+  const baseOrigin = request.nextUrl.origin || getSiteUrl(request);
 
   const createRedirect = (pathWithSearch: string) => {
     return NextResponse.redirect(new URL(pathWithSearch, baseOrigin));

@@ -22,8 +22,11 @@ export function getSiteUrl(request?: Request): string {
   // 2. Jika dipanggil di server dengan objek Request
   if (request) {
     const forwardedHost = request.headers.get("x-forwarded-host");
+    const isLocal =
+      forwardedHost?.includes("localhost") ||
+      forwardedHost?.includes("127.0.0.1");
     const forwardedProto =
-      request.headers.get("x-forwarded-proto") || "https";
+      request.headers.get("x-forwarded-proto") || (isLocal ? "http" : "https");
 
     if (forwardedHost) {
       // Jika di production tapi forwardedHost masih localhost, prioritaskan envUrl

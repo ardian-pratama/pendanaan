@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Merriweather, Inter } from "next/font/google";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { OAuthCodeListener } from "@/components/common/oauth-listener";
 import "./globals.css";
 
 const merriweather = Merriweather({
@@ -37,6 +38,7 @@ export default function RootLayout({
       className={`${merriweather.variable} ${inter.variable} h-full antialiased font-sans`}
     >
       <body className="min-h-full flex flex-col font-sans">
+        <OAuthCodeListener />
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>
