@@ -93,15 +93,27 @@ export async function middleware(request: NextRequest) {
     const hasAdminAccess = isStaffOrAdmin(role);
 
     // Prioritize returning to original location if specified (e.g. /?openCart=1, /pesanan, /#menu)
-    if (next && next !== "/login") {
-      if (next.startsWith("/admin") && !hasAdminAccess) {
-        const url = request.nextUrl.clone();
-        url.pathname = "/";
-        url.search = "unauthorized=admin";
-        return NextResponse.redirect(url);
-      }
+    if (next && next.startsWith("/") && !next.startsWith("//")) {
       const targetUrl = new URL(next, request.nextUrl.origin);
-      return NextResponse.redirect(targetUrl);
+
+      if (targetUrl.origin !== request.nextUrl.origin) {
+      return NextResponse.redirect(
+        new URL("/", request.nextUrl.origin)
+      );
+    }
+
+    if (
+      (targetUrl.pathname === "/admin" ||
+        targetUrl.pathname.startsWith("/admin/")) &&
+      !hasAdminAccess
+    ) {
+      const homeUrl = new URL("/", request.nextUrl.origin);
+      homeUrl.searchParams.set("unauthorized", "admin");
+
+      return NextResponse.redirect(homeUrl);
+    }
+
+  return NextResponse.redirect(targetUrl);
     }
 
     // Default redirect when no explicit next is specified:
