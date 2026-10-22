@@ -3,7 +3,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { isStaffOrAdmin } from "@/lib/auth/permissions";
 
 /**
- * Next.js Middleware — refresh sesi Supabase + proteksi route.
+ * Next.js 16 Proxy — refresh sesi Supabase + proteksi route.
  *
  * Logika:
  * - /admin/**  → wajib login DAN role staf/admin (superadmin, admin, bendahara, staff)
@@ -13,7 +13,7 @@ import { isStaffOrAdmin } from "@/lib/auth/permissions";
  *               jika sudah login sebagai user biasa → redirect /
  * - Semua lain → hanya refresh sesi
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,7 +23,7 @@ export async function middleware(request: NextRequest) {
 
   if (!url || !key) {
     console.warn(
-      "[Middleware] Supabase environment variables are missing (NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY). Please configure them in your Vercel Project Settings."
+      "[Proxy] Supabase environment variables are missing (NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY). Please configure them in your Vercel Project Settings."
     );
     if (request.nextUrl.pathname.startsWith("/admin")) {
       const loginUrl = request.nextUrl.clone();
@@ -110,23 +110,23 @@ export async function middleware(request: NextRequest) {
       const targetUrl = new URL(next, request.nextUrl.origin);
 
       if (targetUrl.origin !== request.nextUrl.origin) {
-      return NextResponse.redirect(
-        new URL("/", request.nextUrl.origin)
-      );
-    }
+        return NextResponse.redirect(
+          new URL("/", request.nextUrl.origin)
+        );
+      }
 
-    if (
-      (targetUrl.pathname === "/admin" ||
-        targetUrl.pathname.startsWith("/admin/")) &&
-      !hasAdminAccess
-    ) {
-      const homeUrl = new URL("/", request.nextUrl.origin);
-      homeUrl.searchParams.set("unauthorized", "admin");
+      if (
+        (targetUrl.pathname === "/admin" ||
+          targetUrl.pathname.startsWith("/admin/")) &&
+        !hasAdminAccess
+      ) {
+        const homeUrl = new URL("/", request.nextUrl.origin);
+        homeUrl.searchParams.set("unauthorized", "admin");
 
-      return NextResponse.redirect(homeUrl);
-    }
+        return NextResponse.redirect(homeUrl);
+      }
 
-  return NextResponse.redirect(targetUrl);
+      return NextResponse.redirect(targetUrl);
     }
 
     // Default redirect when no explicit next is specified:
