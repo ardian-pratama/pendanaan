@@ -13,25 +13,13 @@ import { isStaffOrAdmin } from "@/lib/auth/permissions";
  *               jika sudah login sebagai user biasa → redirect /
  * - Semua lain → hanya refresh sesi
  */
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/supabase/constants";
+
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key =
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-  if (!url || !key) {
-    console.warn(
-      "[Proxy] Supabase environment variables are missing (NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY). Please configure them in your Vercel Project Settings."
-    );
-    if (request.nextUrl.pathname.startsWith("/admin")) {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
-      return NextResponse.redirect(loginUrl);
-    }
-    return supabaseResponse;
-  }
+  const url = SUPABASE_URL;
+  const key = SUPABASE_ANON_KEY;
 
   const supabase = createServerClient(
     url,

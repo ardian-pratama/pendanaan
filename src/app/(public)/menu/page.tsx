@@ -59,15 +59,6 @@ export default function MenuCatalogPage() {
     let cancelled = false;
 
     async function loadData() {
-      if (
-        !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-        (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-          !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)
-      ) {
-        setLoading(false);
-        return;
-      }
-
       try {
         const supabase = createClient();
         const { data, error } = await supabase
